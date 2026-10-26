@@ -1,3 +1,4 @@
+```yaml
 name: Deploy to GitHub Pages
 
 on:
@@ -17,37 +18,62 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Configure Pages
+
+      - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v5
-      - run: npm install
-      # base_path is "/<repo-name>" for project sites and "" for user sites, so /images/... resolves correctly
-      - name: Build
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build website
         run: npm run build -- --base="${{ steps.pages.outputs.base_path }}/"
-      - name: Check every image used on the page was copied to the build
+
+      - name: Check build files
         run: |
           set -e
-          for f in $(grep -o 'src="[^"]*\.png"' dist/index.html | sed 's/src="//;s/"$//'); do
-            n=$(basename "$f")
-            test -f "dist/images/$n" || { echo "Missing image in build: $n"; exit 1; }
-          done
-          test -f dist/assets/resume.pdf
-          echo "All images and resume found"
-      - uses: actions/upload-pages-artifact@v3
+
+          test -f dist/index.html || {
+            echo "ERROR: dist/index.html not found"
+            exit 1
+          }
+
+          test -f dist/images/favicon.png || {
+            echo "ERROR: public/images/favicon.png was not copied to dist/images/favicon.png"
+            exit 1
+          }
+
+          test -f dist/assets/resume.pdf || {
+            echo "ERROR: dist/assets/resume.pdf not found"
+            exit 1
+          }
+
+          echo "Build checks passed successfully"
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
+```
