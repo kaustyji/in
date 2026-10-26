@@ -1,0 +1,53 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - run: npm install
+      # base_path is "/<repo-name>" for project sites and "" for user sites, so /images/... resolves correctly
+      - name: Build
+        run: npm run build -- --base="${{ steps.pages.outputs.base_path }}/"
+      - name: Check every image used on the page was copied to the build
+        run: |
+          set -e
+          for f in $(grep -o 'src="[^"]*\.png"' dist/index.html | sed 's/src="//;s/"$//'); do
+            n=$(basename "$f")
+            test -f "dist/images/$n" || { echo "Missing image in build: $n"; exit 1; }
+          done
+          test -f dist/assets/resume.pdf
+          echo "All images and resume found"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
