@@ -18,6 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,9 +41,22 @@ jobs:
       - name: Check build files
         run: |
           set -e
-          test -f dist/index.html
-          test -f dist/images/favicon.png
-          test -f dist/assets/resume.pdf
+
+          test -f dist/index.html || {
+            echo "ERROR: dist/index.html not found"
+            exit 1
+          }
+
+          test -n "$(find dist/assets -maxdepth 1 -type f \( -name 'favicon-*' -o -name 'favicon.*' \) -print -quit)" || {
+            echo "ERROR: Favicon asset not found in dist/assets"
+            exit 1
+          }
+
+          test -f dist/assets/resume.pdf || {
+            echo "ERROR: Resume not found at dist/assets/resume.pdf"
+            exit 1
+          }
+
           echo "Build checks passed successfully"
 
       - name: Upload Pages artifact
@@ -53,9 +67,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
