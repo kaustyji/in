@@ -3,7 +3,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,25 +41,12 @@ jobs:
       - name: Check build files
         run: |
           set -e
-
-          test -f dist/index.html || {
-            echo "ERROR: dist/index.html not found"
-            exit 1
-          }
-
-          test -f dist/images/favicon.png || {
-            echo "ERROR: public/images/favicon.png was not copied to dist/images/favicon.png"
-            exit 1
-          }
-
-          test -f dist/assets/resume.pdf || {
-            echo "ERROR: dist/assets/resume.pdf not found"
-            exit 1
-          }
-
+          test -f dist/index.html
+          test -f dist/images/favicon.png
+          test -f dist/assets/resume.pdf
           echo "Build checks passed successfully"
 
-      - name: Upload GitHub Pages artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
@@ -67,13 +54,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-```
+``` id="74129"
